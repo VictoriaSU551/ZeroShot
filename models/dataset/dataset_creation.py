@@ -140,8 +140,9 @@ def create_dataloader(workload_run_paths, test_workload_run_paths, statistics_fi
             test_collate_fn = functools.partial(plan_collator, db_statistics=test_database_statistics,
                                                 feature_statistics=feature_statistics,
                                                 plan_featurization_name=plan_featurization_name)
-            # previously shuffle=False but this resulted in bugs
-            dataloader_args.update(collate_fn=test_collate_fn)
+            # Keep evaluation batches stable across training and checkpoint reload.
+            # Training/validation loaders above retain their original shuffle setting.
+            dataloader_args.update(collate_fn=test_collate_fn, shuffle=False)
             test_loader = DataLoader(test_dataset, **dataloader_args)
             test_loaders.append(test_loader)
 

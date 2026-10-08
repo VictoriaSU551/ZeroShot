@@ -1,0 +1,217 @@
+{
+  "scope": "Zero-Shot Cost Models, VLDB 2022 only",
+  "upstream_commit": "9ceabbdd753b6ce0c21a23cd6e64214e60e1197c",
+  "full_paper_reproduction": false,
+  "runs": [
+    {
+      "status": "PIPELINE_VERIFIED_NOT_FULL_PAPER_REPRODUCTION",
+      "mode": "deepdb",
+      "seed": 0,
+      "epochs_completed": 5,
+      "device": "cpu",
+      "train_databases": [
+        "airline",
+        "ssb",
+        "tpc_h",
+        "walmart",
+        "financial",
+        "basketball",
+        "accidents",
+        "movielens",
+        "baseball",
+        "hepatitis",
+        "tournament",
+        "credit",
+        "employee",
+        "consumer",
+        "geneea",
+        "genome",
+        "carcinogenesis",
+        "seznam",
+        "fhnk"
+      ],
+      "held_out_database": "imdb",
+      "selected_source_queries": 9728,
+      "training_queries": 8268,
+      "validation_queries": 1460,
+      "statistics_scope": "training databases only (including their validation split)",
+      "test_results": {
+        "index_workload_100k_s2_c8220": {
+          "queries": 512,
+          "median_q_error": 1.5339082087092017,
+          "p95_q_error": 4.6075888966375365,
+          "max_q_error": 20.16797664535373
+        },
+        "workload_100k_s1_c8220": {
+          "queries": 512,
+          "median_q_error": 1.4148412480082566,
+          "p95_q_error": 2.6435454794475945,
+          "max_q_error": 5.223528940519695
+        },
+        "synthetic_c8220": {
+          "queries": 512,
+          "median_q_error": 1.4010994990191628,
+          "p95_q_error": 2.2871248982122734,
+          "max_q_error": 3.359849238539049
+        },
+        "scale_c8220": {
+          "queries": 382,
+          "median_q_error": 1.3885358099236456,
+          "p95_q_error": 2.5351602878336617,
+          "max_q_error": 3.6754595526622182
+        },
+        "job-light_c8220": {
+          "queries": 50,
+          "median_q_error": 1.2780407538449379,
+          "p95_q_error": 2.850774827032923,
+          "max_q_error": 4.372329623181895
+        }
+      },
+      "checkpoint_reload_matches": true,
+      "metrics_independently_verified": true,
+      "elapsed_seconds_this_invocation": 32.47899730000063,
+      "checkpoint_sha256": "5bd67de2a68b1ef37b27fc4f250c9974e30dafac271822cc5cf20f7fe6987e82",
+      "run_directory": "output/smoke_deepdb_s0_n256_e5_t512"
+    },
+    {
+      "status": "PIPELINE_VERIFIED_NOT_FULL_PAPER_REPRODUCTION",
+      "mode": "exact",
+      "seed": 0,
+      "epochs_completed": 5,
+      "device": "cpu",
+      "train_databases": [
+        "airline",
+        "ssb",
+        "tpc_h",
+        "walmart",
+        "financial",
+        "basketball",
+        "accidents",
+        "movielens",
+        "baseball",
+        "hepatitis",
+        "tournament",
+        "credit",
+        "employee",
+        "consumer",
+        "geneea",
+        "genome",
+        "carcinogenesis",
+        "seznam",
+        "fhnk"
+      ],
+      "held_out_database": "imdb",
+      "selected_source_queries": 9728,
+      "training_queries": 8268,
+      "validation_queries": 1460,
+      "statistics_scope": "training databases only (including their validation split)",
+      "test_results": {
+        "index_workload_100k_s2_c8220": {
+          "queries": 512,
+          "median_q_error": 1.7082614244721621,
+          "p95_q_error": 5.337345178170935,
+          "max_q_error": 30.17808588841241
+        },
+        "workload_100k_s1_c8220": {
+          "queries": 512,
+          "median_q_error": 1.5389822128049147,
+          "p95_q_error": 3.3057554787591044,
+          "max_q_error": 6.727006591857778
+        },
+        "synthetic_c8220": {
+          "queries": 512,
+          "median_q_error": 1.7867974135634492,
+          "p95_q_error": 3.6064852209171563,
+          "max_q_error": 4.827242678987646
+        },
+        "scale_c8220": {
+          "queries": 382,
+          "median_q_error": 1.810328719843881,
+          "p95_q_error": 4.012973206703201,
+          "max_q_error": 5.371114377841917
+        },
+        "job-light_c8220": {
+          "queries": 50,
+          "median_q_error": 1.711881100184287,
+          "p95_q_error": 2.6225185008291976,
+          "max_q_error": 2.8201299023656388
+        }
+      },
+      "checkpoint_reload_matches": true,
+      "metrics_independently_verified": true,
+      "elapsed_seconds_this_invocation": 281.1701299000124,
+      "checkpoint_sha256": "2a0fb2284336a28df32675b2f54bd9fc349480bcfce3aad44edda225bfb79cf2",
+      "run_directory": "output/smoke_exact_s0_n256_e5_t512"
+    },
+    {
+      "status": "PIPELINE_VERIFIED_NOT_FULL_PAPER_REPRODUCTION",
+      "mode": "postgres",
+      "seed": 0,
+      "epochs_completed": 5,
+      "device": "cpu",
+      "train_databases": [
+        "airline",
+        "ssb",
+        "tpc_h",
+        "walmart",
+        "financial",
+        "basketball",
+        "accidents",
+        "movielens",
+        "baseball",
+        "hepatitis",
+        "tournament",
+        "credit",
+        "employee",
+        "consumer",
+        "geneea",
+        "genome",
+        "carcinogenesis",
+        "seznam",
+        "fhnk"
+      ],
+      "held_out_database": "imdb",
+      "selected_source_queries": 9728,
+      "training_queries": 8268,
+      "validation_queries": 1460,
+      "statistics_scope": "training databases only (including their validation split)",
+      "test_results": {
+        "index_workload_100k_s2_c8220": {
+          "queries": 512,
+          "median_q_error": 1.5200384173728918,
+          "p95_q_error": 4.681160864867926,
+          "max_q_error": 16.973292515250268
+        },
+        "workload_100k_s1_c8220": {
+          "queries": 512,
+          "median_q_error": 1.3951182657695336,
+          "p95_q_error": 2.7563217980974795,
+          "max_q_error": 6.234855678293946
+        },
+        "synthetic_c8220": {
+          "queries": 512,
+          "median_q_error": 1.2670704919321327,
+          "p95_q_error": 2.6658864291275313,
+          "max_q_error": 4.10464356186223
+        },
+        "scale_c8220": {
+          "queries": 382,
+          "median_q_error": 1.311925528655923,
+          "p95_q_error": 2.965738150724794,
+          "max_q_error": 3.98628928120833
+        },
+        "job-light_c8220": {
+          "queries": 50,
+          "median_q_error": 1.3425411806377192,
+          "p95_q_error": 2.1888373278820557,
+          "max_q_error": 4.433691311767912
+        }
+      },
+      "checkpoint_reload_matches": true,
+      "metrics_independently_verified": true,
+      "elapsed_seconds_this_invocation": 33.90120459999889,
+      "checkpoint_sha256": "701992da87d0739147b9549ec44053d7ecad6a2a638fe12d0f40c3cdba6cc5d8",
+      "run_directory": "output/smoke_postgres_s0_n256_e5_t512"
+    }
+  ]
+}

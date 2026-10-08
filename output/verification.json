@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "completed_runs": 3,
+  "checks": [
+    "source and sampled input hashes",
+    "feature statistics hash",
+    "model code hashes",
+    "checkpoint hash and finite weights",
+    "completed epochs and finite losses",
+    "complete test coverage",
+    "positive finite predictions",
+    "labels in seconds",
+    "independent Q-error calculation",
+    "checkpoint reload receipt"
+  ]
+}

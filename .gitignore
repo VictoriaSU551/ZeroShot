@@ -140,3 +140,14 @@ cache
 # for test models
 todo
 logs
+
+# Local reproduction inputs and generated artifacts
+/data/*
+!/data/README.md
+/output/*
+!/output/README.md
+!/output/reproduction_summary.json
+!/output/verification.json
+!/output/environment.txt
+/.runtime/
+/*.pdf

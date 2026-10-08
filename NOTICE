@@ -1,0 +1,11 @@
+This repository reproduces the VLDB 2022 paper:
+Zero-Shot Cost Models for Out-of-the-box Learned Cost Prediction
+by Benjamin Hilprecht and Carsten Binnig.
+
+Original implementation: https://github.com/DataManagementLab/zero-shot-cost-estimation
+Base commit: 9ceabbdd753b6ce0c21a23cd6e64214e60e1197c
+The original Apache License 2.0 is retained in LICENSE.md.
+
+Local modifications add Python/DGL compatibility, reproducible downloads,
+short-run orchestration, independent evaluation checks, and collaboration
+documentation. The model architecture and official hyperparameters are retained.

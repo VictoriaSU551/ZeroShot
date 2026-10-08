@@ -1,221 +1,98 @@
-# Zero-Shot Cost Estimation Models
+# ZeroShot：Zero-Shot Cost Models 论文复现
 
-A learned cost model that generalizes to unseen databases and workloads out of the box. This is the implementation
-described in
+复现论文：Benjamin Hilprecht、Carsten Binnig，**Zero-Shot Cost Models for Out-of-the-box Learned Cost Prediction**，PVLDB 15(11), 2361–2374, 2022。
 
-Benjamin Hilprecht and Carsten Binnig: "Zero-Shot Cost Models for Out-of-the-box Learned Cost Prediction", VLDB'2022. [[PDF]](https://arxiv.org/abs/2201.00561)
+- [论文](https://doi.org/10.14778/3551793.3551799)
+- [作者源代码](https://github.com/DataManagementLab/zero-shot-cost-estimation)，基于提交 `9ceabbdd753b6ce0c21a23cd6e64214e60e1197c`
+- [作者数据](https://osf.io/ga2xj/)
+- [上游原始说明](docs/UPSTREAM_README.md)
 
-<p align="center">
-  <img src="overview.png" width="50%">
-</p>
+本项目与另一个 **Deep DB 论文复现项目完全分离**。所有环境、下载、实验输出均在本 `ZeroShot` 目录内；使用独立 Git 仓库。这里的 `deepdb_augmented` 是 **ZeroShot 官方发布的带基数估计查询计划**，不是另一项目的训练产物。原作者代码中也包含 `deepdb.py` 和 `data_driven_cardinalities`，保留是为了维护 ZeroShot 官方实现的完整性。
 
-## Citation
+## 当前范围
 
-Please cite our papers, if you find this work useful or use it in your own paper as baseline.
+本阶段目标是跑通真实数据上的跨数据库训练、验证、测试、指标复算及模型重载，**不是宣称整篇论文的数值已经复现**。
 
+2026-10-08 已完成三种输入设置（PostgreSQL 估计基数、作者提供的 DeepDB 估计基数、真实基数）各 5 epochs 的短训练。每种设置使用 8,268 条训练查询、1,460 条验证查询，并在 IMDB 的 5 个工作负载上评估共 1,968 条查询。三个模型均通过 checkpoint 重载和逐查询 Q-error 复算；5 项回归测试通过。
+
+- 完整下载官方 `deepdb_augmented` 和 `parsed_plans` 两个预处理压缩包，验证官方 SHA256 和 ZIP CRC；128 个文件约 3.28 GB（十进制）。
+- 使用作者模型、三种官方超参数配置与 QLoss；CPU 环境采用 Python 3.11、PyTorch 2.2.2、DGL 1.1.2。
+- 短训练固定种子 0，每个源工作负载抽取至多 256 条查询；19 个训练数据库，IMDB 完全留作测试数据库。
+- 特征统计仅由源数据库建立；源查询按上游实现分成 85% 训练、15% 验证，标签归一化也沿用上游实现。IMDB 运行时标签不进入训练或验证。
+- IMDB 的 standard、index、synthetic、scale、JOB-light 分别测试，每个工作负载最多 512 条；JOB-light 在发布数据中有 50 条，全部评估。
+- 查看 [运行汇总](output/reproduction_summary.json)、[独立核验](output/verification.json) 和 [后续实验与分工](docs/remaining-work.md)。结果汇总不存在或没有成功状态时，不应当声称实验完成。
+
+短训练中得到的 Q-error 不能与论文完整训练结果直接比较。`exact` 输入包含真实基数，是理想化实验设置，不代表无需执行查询即可获得的生产输入。
+
+## 目录
+
+```text
+ZeroShot/
+  data/                     官方数据与 SHA256 清单（不上传数据）
+  output/                   抽样输入、模型、预测、日志与核验结果
+  .venv/                    本项目独立环境（不上传）
+  models/                   作者的模型实现，附最小兼容修复
+  cross_db_benchmark/        作者的 DBGen 基准实现
+  data_driven_cardinalities/ 作者随 ZeroShot 提供的基数注释代码
+  setup/                    作者的超参数与数据库设置
+  tests/                    长期保留的兼容与评估回归测试
+  docs/                     上游说明、执行范围、后续分工
+  download_data.py           下载、校验、解压和跳过已验证数据
+  reproduce.py               短训练、测试、checkpoint 重载与一致性校验
+  verify_results.py          独立复算已完成运行的指标
 ```
-@article{Hilprecht2022a,
-  author    = {Benjamin Hilprecht and Carsten Binnig},
-  journal   = {Proc. {VLDB} Endow.},
-  title     = {Zero-Shot Cost Models for Out-of-the-box Learned Cost Prediction},
-  year      = {2022},
-  number    = {11},
-  pages     = {2361--2374},
-  volume    = {15},
-  doi       = {10.14778/3551793.3551799},
-  timestamp = {Fri, 09 Aug 2022 01:00:00 +0200},
-  url       = {http://www.vldb.org/pvldb/vol15/p2483-hilprecht.pdf},
+
+模型、原始数据、压缩包、虚拟环境及本地论文 PDF 不提交 Git。成功解压后删除压缩包；重载验证后删除重复模型副本。保留可重用模型、抽样索引、输入哈希和最终日志。
+
+## Windows PowerShell 快速运行
+
+在仓库根目录执行。无需连接 PostgreSQL，因为使用作者已经采集的查询计划与运行时。
+
+```powershell
+py -3.11 -m venv .venv
+$env:PIP_CACHE_DIR = "$PWD/output/pip-cache"
+./.venv/Scripts/python.exe -m pip install --upgrade pip --index-url https://pypi.org/simple
+./.venv/Scripts/python.exe -m pip install -r requirements-repro.txt --index-url https://pypi.org/simple --extra-index-url https://download.pytorch.org/whl/cpu
+./.venv/Scripts/python.exe download_data.py
+./.venv/Scripts/python.exe reproduce.py --mode postgres
+./.venv/Scripts/python.exe reproduce.py --mode deepdb
+./.venv/Scripts/python.exe reproduce.py --mode exact
+./.venv/Scripts/python.exe verify_results.py
+./.venv/Scripts/python.exe -m pytest tests -q -p no:cacheprovider
+```
+
+`requirements-repro.txt` 是训练流程的最小直接依赖；`requirements-lock.txt` 固定本次已验证环境的全部版本。上游 `requirements.txt` 还包含重新采集数据库、Jupyter 及其他基数模型的依赖，不作为本流程的安装入口。
+Linux 可使用 Python 3.11 创建 `.venv` 并替换解释器路径为 `.venv/bin/python`；本次实际验证平台为 Windows CPU，GPU/Linux 尚未验证。
+
+`reproduce.py` 自动固定 Python hash seed、NumPy/PyTorch 种子，使用 4 个 CPU 线程和 `num_workers=0`。再次运行相同配置会核验已有输入与模型绑定，并重载 checkpoint；不会重新训练已完成的模型。更改模型代码或配置后，不能复用绑定不同的运行目录。
+
+增大训练预算的示例（仍只是 IMDB 留一实验，计算量明显增加）：
+
+```powershell
+./.venv/Scripts/python.exe reproduce.py --mode postgres --samples-per-workload 0 --test-samples 0 --epochs 200
+```
+
+正式实验应先按论文冻结方案、确认内存与训练时间，再执行。[后续清单](docs/remaining-work.md) 区分完整训练、复杂查询、基线、few-shot、消融和原始数据采集。
+
+## 对上游实现的改动
+
+- `collections.MutableMapping` 改为 Python 3.11 支持的 `collections.abc.MutableMapping`。
+- DGL 消息复制函数 `copy_src` 改为语义等价的 `copy_u`。
+- 测试集改为固定顺序，消除训练随机状态导致的重载时批次变化；训练与验证集仍保留上游打乱方式。旧版本随机测试批次曾使相同模型的个别预测出现批次相关差异，固定批次后要求重载预测通过严格一致性检查。此检查证明固定批次下可复现，尚未证明所有批次组合下预测完全不变。
+- 新增独立下载、抽样、实验绑定、指标核验和协作说明；不更改模型架构、损失或官方超参数。
+- 评估按实际逐查询记录统计数量，不使用上游按整批累计的 `val_num_tuples` 作为真实样本量。
+
+## 合作和许可
+
+建议采用分支 + Pull Request；具体分工见 [remaining-work.md](docs/remaining-work.md)，规则见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+上游 Apache 2.0 许可保留于 [LICENSE.md](LICENSE.md)。使用论文、代码或数据请按作者要求引用；数据与论文的权利不因代码许可而改变。
+
+```bibtex
+@article{Hilprecht2022ZeroShot,
+  author = {Benjamin Hilprecht and Carsten Binnig},
+  title = {Zero-Shot Cost Models for Out-of-the-box Learned Cost Prediction},
+  journal = {Proceedings of the VLDB Endowment},
+  volume = {15}, number = {11}, pages = {2361--2374}, year = {2022},
+  doi = {10.14778/3551793.3551799}
 }
-
-@inproceedings{DBLP:conf/cidr/HilprechtB22,
-  author    = {Benjamin Hilprecht and
-               Carsten Binnig},
-  title     = {One Model to Rule them All: Towards Zero-Shot Learning for Databases},
-  booktitle = {12th Conference on Innovative Data Systems Research, {CIDR} 2022,
-               Chaminade, CA, USA, January 9-12, 2022},
-  publisher = {www.cidrdb.org},
-  year      = {2022},
-  url       = {https://www.cidrdb.org/cidr2022/papers/p16-hilprecht.pdf},
-  timestamp = {Mon, 20 Jun 2022 12:03:52 +0200},
-  biburl    = {https://dblp.org/rec/conf/cidr/HilprechtB22.bib},
-  bibsource = {dblp computer science bibliography, https://dblp.org}
-}
 ```
-
-# Table of contents
-
-1. [Main Modules](#modules)
-2. [Setup](#setup)
-3. [DBGen Benchmark](#dbgenbenchmark)
-4. [Train and evaluate a Zero-shot Cost Model](#traineval)
-5. [FAQ](#faq)
-
-## Main Modules <a name="modules"></a>
-
-| Module                    | Description                                                                                |
-|---------------------------|--------------------------------------------------------------------------------------------|
-| cross_db_benchmark        | All code required to reproduce the DBGen benchmark (workload generator, executor, parsing) |
-| data_driven_cardinalities | DeepDB code to annotate the query plans with data-driven cardinalities                     |
-| models                    | Zero-Shot cost model code                                                                  |
-| setup                     | Model hyperparameters and commands to execute DBGen Benchmark                              |
-
-## Setup <a name="setup"></a>
-
-Sets up a virtual environment and install the dependencies. By default, the CPU versions of torch and dgl will be
-installed. In case a GPU is available, please install the GPU versions of torch and DGL afterwards. All models of the
-paper were trained using GPUs.
-
-```
-python3.8 -m venv venv 
-source venv/bin/activate
-pip3 install --upgrade setuptools
-pip3 install --upgrade pip
-pip3 install -r requirements.txt
-```
-
-In order to annotate cardinalities with DeepDB, you have to install the
-additional [requirements](data_driven_cardinalities/deepdb/requirements.txt).
-
-## DBGen Benchmark <a name="dbgenbenchmark"></a>
-
-The DBGen benchmark consists of a variety of relational datasets and workloads. The workloads were executed on postgres
-and the plans were extracted and are also made available as part of this benchmark.
-
-### Fast-Forward
-
-You can download the preprocessed workloads and directly start training zero-shot cost models on them. For this, please
-download all folders and code from this
-[data repository](https://osf.io/ga2xj/?view_only=60916f2446e844edb32e3b4d676cb6ee)
-and place both code and data in some directory. Afterwards please unzip all zipped folders in their respective
-directory. Now you can skip all the following steps (in Step-by-Step) and directly execute the training.
-
-### Reproduce entire DBGen benchmark
-
-If you want to also reproduce how queries were run and parsed, execute the following commands. Note that you still have
-to download the code and data from the
-[data repository](https://osf.io/ga2xj/?view_only=60916f2446e844edb32e3b4d676cb6ee). Afterwards, download missing
-datasets from the relational fit website by using the following script. Note that this step requires the mysql client
-which on Ubuntu can be installed via `apt install mysql-client`.
-
-```
-python3 dbgensetup.py --download_relational_fit --data_dir ../zero-shot-data/datasets
-```
-
-Scale the datasets to an appropriate size.
-
-```
-python3 dbgensetup.py --scale_datasets --data_dir ../zero-shot-data/datasets
-```
-
-Load the datasets into a postgres instance (requires that there is a local Postgres instance running).
-
-```
-python3 dbgensetup.py --load_database --data_dir ../zero-shot-data/datasets --database_conn user=postgres,password=postgres,host=localhost 
-```
-
-Generate the workloads.
-
-```
-python3 dbgensetup.py --generate_workloads --workload_dir ../zero-shot-data/workloads
-```
-
-Run the workloads on a postgres instance. This script will generate all python commands that have to be executed.
-
-```
-python3 dbgensetup.py --print_run_commands
-```
-
-Parse the workloads.
-
-```
-python3 dbgensetup.py --parse_all_queries --raw_dir ../zero-shot-data/runs/raw --parsed_plan_dir ../zero-shot-data/runs/parsed_plans --workloads workload_100k_s1_c8220.json complex_workload_200k_s1_c8220.json index_workload_100k_s2_c8220.json synthetic_c8220.json scale_c8220.json job-light_c8220.json --target_stats_path experiments/data/statistics/postgres_workload_stats.csv --min_query_ms 100
-```
-
-In an additional step, we can replace the estimated cardinalities of postgres by those of DeepDB. For this, please refer
-to the separate [README](data_driven_cardinalities/deepdb/README.md).
-
-## Train and evaluate a Zero-shot Cost Model <a name="traineval"></a>
-
-In order to train a zero-shot model on a variety of training workloads, we first have to construct some metadata about
-the workloads (such as which physical plan operators occur etc.). This is an automated step. The two commands below
-execute this step (once for the standard+index workloads (where DeepDB cardinalities are available) and once for the
-standard+complex workloads (where we can only use exact or Postgres estimated cardinalities)).
-
-```
-python3 train.py --gather_feature_statistics --workload_runs workload_100k_s1_c8220.json index_workload_100k_s2_c8220.json synthetic_c8220.json scale_c8220.json job-light_c8220.json --raw_dir ../zero-shot-data/runs/deepdb_augmented --target ../zero-shot-data/runs/deepdb_augmented/statistics_workload_combined.json
-python3 train.py --gather_feature_statistics --workload_runs workload_100k_s1_c8220.json complex_workload_200k_s1_c8220.json index_workload_100k_s2_c8220.json --raw_dir ../zero-shot-data/runs/parsed_plans --target ../zero-shot-data/runs/parsed_plans/statistics_workload_combined.json
-```
-
-We are now ready to train a zero-shot model and evaluate it on some workload on an unseen database. Note that with the
-hyperparameters we can control, which cardinalities should be used (exact, DeepDB estimated and estimated from
-Postgres):
-
-```
-Exact Cards: setup/tuned_hyperparameters/tune_best_config.json 
-DeepDB Cards: setup/tuned_hyperparameters/tune_deepdb_best_config.json 
-Postgres Cards: setup/tuned_hyperparameters/tune_est_best_config.json 
-```
-
-The commands to train a zero-shot cost model on 19 databases and test it on IMDB are as follows (make sure to use the
-right feature statistics depending on whether you use `deepdb_augmented` or `parsed_plans` plans (i.e., with Postgres
-cardinality estimates only). The commands below are correct.):
-
-```
-# Test workloads on IMDB (JOB-light, synthetic,scale), train on 19 other DBs
-# DeepDB Cards
-python3 train.py --train_model --workload_runs ../zero-shot-data/runs/deepdb_augmented/airline/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/airline/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/ssb/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/ssb/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/tpc_h/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/tpc_h/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/walmart/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/walmart/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/financial/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/financial/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/basketball/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/basketball/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/accidents/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/accidents/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/movielens/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/movielens/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/baseball/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/baseball/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/hepatitis/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/hepatitis/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/tournament/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/tournament/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/credit/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/credit/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/employee/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/employee/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/consumer/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/consumer/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/geneea/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/geneea/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/genome/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/genome/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/carcinogenesis/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/carcinogenesis/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/seznam/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/seznam/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/fhnk/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/fhnk/workload_100k_s1_c8220.json --test_workload_runs ../zero-shot-data/runs/deepdb_augmented/imdb/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/synthetic_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/scale_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/job-light_c8220.json --statistics_file ../zero-shot-data/runs/deepdb_augmented/statistics_workload_combined.json --target ../zero-shot-data/evaluation/db_generalization_tune_deepdb/ --hyperparameter_path setup/tuned_hyperparameters/tune_deepdb_best_config.json --max_epoch_tuples 100000 --loss_class_name QLoss  --device cuda:0 --filename_model imdb_0 --num_workers 16 --database postgres --seed 0
-# Exact Cards
-python3 train.py --train_model --workload_runs ../zero-shot-data/runs/deepdb_augmented/airline/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/airline/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/ssb/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/ssb/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/tpc_h/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/tpc_h/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/walmart/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/walmart/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/financial/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/financial/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/basketball/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/basketball/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/accidents/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/accidents/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/movielens/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/movielens/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/baseball/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/baseball/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/hepatitis/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/hepatitis/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/tournament/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/tournament/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/credit/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/credit/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/employee/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/employee/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/consumer/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/consumer/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/geneea/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/geneea/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/genome/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/genome/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/carcinogenesis/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/carcinogenesis/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/seznam/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/seznam/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/fhnk/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/fhnk/workload_100k_s1_c8220.json --test_workload_runs ../zero-shot-data/runs/deepdb_augmented/imdb/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/synthetic_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/scale_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/job-light_c8220.json --statistics_file ../zero-shot-data/runs/deepdb_augmented/statistics_workload_combined.json --target ../zero-shot-data/evaluation/db_generalization_tune/ --hyperparameter_path setup/tuned_hyperparameters/tune_best_config.json --max_epoch_tuples 100000 --loss_class_name QLoss  --device cuda:0 --filename_model imdb_0 --num_workers 16 --database postgres --seed 0
-# Postgres Cards
-python3 train.py --train_model --workload_runs ../zero-shot-data/runs/deepdb_augmented/airline/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/airline/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/ssb/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/ssb/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/tpc_h/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/tpc_h/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/walmart/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/walmart/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/financial/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/financial/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/basketball/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/basketball/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/accidents/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/accidents/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/movielens/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/movielens/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/baseball/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/baseball/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/hepatitis/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/hepatitis/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/tournament/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/tournament/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/credit/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/credit/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/employee/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/employee/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/consumer/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/consumer/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/geneea/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/geneea/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/genome/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/genome/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/carcinogenesis/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/carcinogenesis/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/seznam/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/seznam/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/fhnk/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/fhnk/workload_100k_s1_c8220.json --test_workload_runs ../zero-shot-data/runs/deepdb_augmented/imdb/index_workload_100k_s2_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/workload_100k_s1_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/synthetic_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/scale_c8220.json ../zero-shot-data/runs/deepdb_augmented/imdb/job-light_c8220.json --statistics_file ../zero-shot-data/runs/deepdb_augmented/statistics_workload_combined.json --target ../zero-shot-data/evaluation/db_generalization_tune_est/ --hyperparameter_path setup/tuned_hyperparameters/tune_est_best_config.json --max_epoch_tuples 100000 --loss_class_name QLoss  --device cuda:0 --filename_model imdb_0 --num_workers 16 --database postgres --seed 0
-
-# JOB Benchmark as Test Workload
-# Exact Cards
-python3 train.py --train_model --workload_runs ../zero-shot-data/runs/parsed_plans/airline/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/airline/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/ssb/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/ssb/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tpc_h/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tpc_h/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/walmart/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/walmart/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/financial/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/financial/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/basketball/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/basketball/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/accidents/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/accidents/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/movielens/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/movielens/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/baseball/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/baseball/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/hepatitis/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/hepatitis/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tournament/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tournament/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/credit/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/credit/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/employee/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/employee/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/consumer/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/consumer/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/geneea/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/geneea/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/genome/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/genome/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/carcinogenesis/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/carcinogenesis/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/seznam/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/seznam/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/fhnk/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/fhnk/workload_100k_s1_c8220.json --test_workload_runs ../zero-shot-data/runs/parsed_plans/imdb_full/job_full_c8220.json --statistics_file ../zero-shot-data/runs/parsed_plans/statistics_workload_combined.json --target ../zero-shot-data/evaluation/job_full_tune/ --hyperparameter_path setup/tuned_hyperparameters/tune_best_config.json --max_epoch_tuples 100000 --loss_class_name QLoss  --device cuda:0 --filename_model imdb_full_0 --num_workers 16 --database postgres --seed 0
-# Postgres Cards
-python3 train.py --train_model --workload_runs ../zero-shot-data/runs/parsed_plans/airline/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/airline/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/ssb/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/ssb/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tpc_h/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tpc_h/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/walmart/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/walmart/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/financial/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/financial/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/basketball/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/basketball/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/accidents/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/accidents/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/movielens/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/movielens/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/baseball/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/baseball/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/hepatitis/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/hepatitis/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tournament/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/tournament/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/credit/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/credit/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/employee/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/employee/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/consumer/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/consumer/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/geneea/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/geneea/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/genome/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/genome/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/carcinogenesis/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/carcinogenesis/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/seznam/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/seznam/workload_100k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/fhnk/complex_workload_200k_s1_c8220.json ../zero-shot-data/runs/parsed_plans/fhnk/workload_100k_s1_c8220.json --test_workload_runs ../zero-shot-data/runs/parsed_plans/imdb_full/job_full_c8220.json --statistics_file ../zero-shot-data/runs/parsed_plans/statistics_workload_combined.json --target ../zero-shot-data/evaluation/job_full_tune_est/ --hyperparameter_path setup/tuned_hyperparameters/tune_est_best_config.json --max_epoch_tuples 100000 --loss_class_name QLoss  --device cuda:0 --filename_model imdb_full_0 --num_workers 16 --database postgres --seed 0
-```
-
-## FAQ <a name="faq"></a>
-
-### How do I port this to another database system beyond PostgreSQL?
-
-The most important conceptual task to support a new DBMS is to a) select the transferable features which can be
-extracted from the plans and statistics, and b) extend the zero shot graph to represent a query by potentially adding
-new node types to holistically represent the query. For instance, in the arxiv paper to support a cloud data warehouse,
-we added node types to represent the scanened columns since the storage was a column store and specialized operator
-nodes for distributed joins (e.g., a shuffle operator).
-
-Conceptually, the code is already implemented in a way that makes it easy to add another database. Simply look for code
-paths which are called "postgres". Usually, there is already a case distinction in case other DBMSs should be added in
-the future. In particular, for the zero-shot models, you have to implement a method to construct the graphs (similar
-to `postgres_plan_batching.py`) and create a subclass for your zero-shot model (similar to `postgres_zero_shot.py`).
-
-In addition, you have to provide some parser that transforms EXPLAIN plans to graphs that the ML models can process.
-Moreover, you of course have to provide additional training data since we only provide training data for PostgreSQL at
-the moment.
-
-### How do I add another dataset?
-
-First, provide the csv files of the new dataset in some folder, e.g., `../zero-shot-data/datasets/ssb`. Afterwards, add
-a folder to `cross_db_benchmark/datasets` similar to the other datasets. You can automatically generate string and
-column statistics as follows.
-
-```
-python3 dbgensetup.py --generate_column_statistics --dataset ssb --data_dir ../zero-shot-data/datasets/ssb
-python3 dbgensetup.py --generate_string_statistics --dataset ssb --data_dir ../zero-shot-data/datasets/ssb
-```
-
-Afterwards, integrate the dataset into the `database_list` in the `datasets.py` file to consider the file in the
-workload generation etc.
-
-### The parser does not work for my queries. What should I do?
-
-In general, we believe that zero-shot cost models are broadly applicable. However, this is just a prototype
-implementation that comes with several limitations. Hence, the code is in particular not intended to be used in any
-production system at the current state.
-
-Most importantly, the parser does not yet support all potential explain plans. Probably there is some fix that solves
-the issue with the parser in your particular case. In general, we would recommend reimplementing the parser since we
-believe it can be greatly simplified by a) using the JSON outputs of the postgres EXPLAIN plans and b) parsing filters
-etc. with a grammar. 
